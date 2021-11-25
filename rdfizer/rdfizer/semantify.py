@@ -407,6 +407,7 @@ def mapping_parser(mapping_file):
 		prefix rml: <http://semweb.mmlab.be/ns/rml#> 
 		prefix ql: <http://semweb.mmlab.be/ns/ql#> 
 		prefix d2rq: <http://www.wiwiss.fu-berlin.de/suhl/bizer/D2RQ/0.1#> 
+		prefix fnml: <http://semweb.mmlab.be/ns/fnml#> 
 		SELECT DISTINCT *
 		WHERE {
 
@@ -429,7 +430,8 @@ def mapping_parser(mapping_file):
 					   ?_graph_structure rr:constant ?graph . }
 			OPTIONAL { ?_subject_map rr:graphMap ?_graph_structure .
 					   ?_graph_structure rr:template ?graph . }		   
-
+			OPTIONAL {?_subject_map fnml:functionValue ?subject_function .}
+			
 	# Predicate -----------------------------------------------------------------------
 			OPTIONAL {
 			?triples_map_id rr:predicateObjectMap ?_predicate_object_map .
@@ -484,7 +486,14 @@ def mapping_parser(mapping_file):
 					?_object_map rr:joinCondition ?join_condition .
 					?join_condition rr:child ?child_value;
 								 rr:parent ?parent_value.
-					OPTIONAL {?_object_map rr:termType ?term .}
+				 	OPTIONAL{?parent_value fnml:functionValue ?parent_function.}
+				 	OPTIONAL{?child_value fnml:functionValue ?child_function.}
+				 	OPTIONAL {?_object_map rr:termType ?term .}
+				}
+				OPTIONAL {
+					?_object_map rr:joinCondition ?join_condition .
+					?join_condition rr:child ?child_value;
+								 rr:parent ?parent_value;
 				}
 			}
 			OPTIONAL {
@@ -492,6 +501,14 @@ def mapping_parser(mapping_file):
 				OPTIONAL {
 					?_object_map rr:datatype ?object_datatype .
 				}
+			}
+			OPTIONAL{
+				?_predicate_object_map rr:objectMap ?_object_map .
+				OPTIONAL {
+					?_object_map rr:datatype ?object_datatype .
+				}
+				?_object_map fnml:functionValue ?function .
+				OPTIONAL {?_object_map rr:termType ?term .}		
 			}
 			OPTIONAL {?_predicate_object_map rr:graph ?predicate_object_graph .}
 			OPTIONAL { ?_predicate_object_map  rr:graphMap ?_graph_structure .
@@ -539,6 +556,7 @@ def mapping_parser(mapping_file):
 				else:
 					reference, condition = string_separetion(str(result_triples_map.subject_constant))
 					subject_map = tm.SubjectMap(str(result_triples_map.subject_constant), condition, "constant", [str(result_triples_map.rdf_class)], result_triples_map.termtype, [result_triples_map.graph])
+			
 				
 			mapping_query_prepared = prepareQuery(mapping_query)
 
@@ -548,6 +566,7 @@ def mapping_parser(mapping_file):
 			join_predicate = {}
 			predicate_object_maps_list = []
 			predicate_object_graph = {}
+			function = False
 			for result_predicate_object_map in mapping_query_prepared_results:
 				join = True
 				if result_predicate_object_map.predicate_constant is not None:
@@ -565,6 +584,9 @@ def mapping_parser(mapping_file):
 				else:
 					predicate_map = tm.PredicateMap("None", "None", "None")
 
+				if "execute" in predicate_map.value:
+					function = True
+
 				if result_predicate_object_map.object_constant is not None:
 					object_map = tm.ObjectMap("constant", str(result_predicate_object_map.object_constant), str(result_predicate_object_map.object_datatype), "None", "None", result_predicate_object_map.term, result_predicate_object_map.language)
 				elif result_predicate_object_map.object_template is not None:
@@ -572,6 +594,15 @@ def mapping_parser(mapping_file):
 				elif result_predicate_object_map.object_reference is not None:
 					object_map = tm.ObjectMap("reference", str(result_predicate_object_map.object_reference), str(result_predicate_object_map.object_datatype), "None", "None", result_predicate_object_map.term, result_predicate_object_map.language)
 				elif result_predicate_object_map.object_parent_triples_map is not None:
+					if (result_predicate_object_map.child_function is not None) and (result_predicate_object_map.parent_function is not None):
+						object_map = tm.ObjectMap("parent triples map function", str(result_predicate_object_map.object_parent_triples_map), str(result_predicate_object_map.object_datatype), str(result_predicate_object_map.child_function), str(result_predicate_object_map.parent_function), result_predicate_object_map.term, result_predicate_object_map.language)
+					elif (result_predicate_object_map.child_function is None) and (result_predicate_object_map.parent_function is not None):
+						object_map = tm.ObjectMap("parent triples map parent function", str(result_predicate_object_map.object_parent_triples_map), str(result_predicate_object_map.object_datatype), str(result_predicate_object_map.child_function), str(result_predicate_object_map.parent_value), result_predicate_object_map.term, result_predicate_object_map.language)
+					elif (result_predicate_object_map.child_function is not None) and (result_predicate_object_map.parent_function is None):
+						object_map = tm.ObjectMap("parent triples map child function", str(result_predicate_object_map.object_parent_triples_map), str(result_predicate_object_map.object_datatype), str(result_predicate_object_map.child_value), str(result_predicate_object_map.parent_function), result_predicate_object_map.term, result_predicate_object_map.language)
+					else:
+						object_map = tm.ObjectMap("parent triples map", str(result_predicate_object_map.object_parent_triples_map), str(result_predicate_object_map.object_datatype), str(result_predicate_object_map.child_value), str(result_predicate_object_map.parent_value), result_predicate_object_map.term, result_predicate_object_map.language)
+					
 					if predicate_map.value + " " + str(result_predicate_object_map.object_parent_triples_map) not in join_predicate:
 						join_predicate[predicate_map.value + " " + str(result_predicate_object_map.object_parent_triples_map)] = {"predicate":predicate_map, "childs":[str(result_predicate_object_map.child_value)], "parents":[str(result_predicate_object_map.parent_value)], "triples_map":str(result_predicate_object_map.object_parent_triples_map)}
 					else:
@@ -580,6 +611,8 @@ def mapping_parser(mapping_file):
 					join = False
 				elif result_predicate_object_map.object_constant_shortcut is not None:
 					object_map = tm.ObjectMap("constant shortcut", str(result_predicate_object_map.object_constant_shortcut), str(result_predicate_object_map.object_datatype), "None", "None", result_predicate_object_map.term, result_predicate_object_map.language)
+				elif result_predicate_object_map.function is not None:
+					object_map = tm.ObjectMap("reference function", str(result_predicate_object_map.function),str(result_predicate_object_map.object_datatype), "None", "None", result_predicate_object_map.term, result_predicate_object_map.language)
 				else:
 					object_map = tm.ObjectMap("None", "None", "None", "None", "None", "None", "None")
 				if join:
@@ -590,7 +623,13 @@ def mapping_parser(mapping_file):
 					object_map = tm.ObjectMap("parent triples map", join_predicate[jp]["triples_map"], str(result_predicate_object_map.object_datatype), join_predicate[jp]["childs"], join_predicate[jp]["parents"],result_predicate_object_map.term, result_predicate_object_map.language)
 					predicate_object_maps_list += [tm.PredicateObjectMap(join_predicate[jp]["predicate"], object_map,predicate_object_graph)]
 
-			current_triples_map = tm.TriplesMap(str(result_triples_map.triples_map_id), str(result_triples_map.data_source), subject_map, predicate_object_maps_list, ref_form=str(result_triples_map.ref_form), iterator=str(result_triples_map.iterator), tablename=str(result_triples_map.tablename), query=str(result_triples_map.query))
+			# current_triples_map = tm.TriplesMap(str(result_triples_map.triples_map_id), str(result_triples_map.data_source), subject_map, predicate_object_maps_list, ref_form=str(result_triples_map.ref_form), iterator=str(result_triples_map.iterator), tablename=str(result_triples_map.tablename), query=str(result_triples_map.query))
+			if function:
+				current_triples_map = tm.TriplesMap(str(result_triples_map.triples_map_id), str(result_triples_map.data_source), None, predicate_object_maps_list, ref_form=str(result_triples_map.ref_form), iterator=str(result_triples_map.iterator), tablename=str(result_triples_map.tablename), query=str(result_triples_map.query),function=True)
+				print('function current_triples_map ', current_triples_map)
+			else:
+				current_triples_map = tm.TriplesMap(str(result_triples_map.triples_map_id), str(result_triples_map.data_source), subject_map, predicate_object_maps_list, ref_form=str(result_triples_map.ref_form), iterator=str(result_triples_map.iterator), tablename=str(result_triples_map.tablename), query=str(result_triples_map.query),function=False)
+
 			triples_map_list += [current_triples_map]
 
 		else:
@@ -2159,6 +2198,10 @@ def semantify_file(triples_map, triples_map_list, delimiter, output_file_descrip
 						subject = "<" + subject_value + ">"
 				except:
 					subject = None
+
+		## TODO: add execute_function here
+		# elif "function" in triples_map.subject_map.subject_mapping_type:
+		# 	subject_value = string_substitution(triples_map.subject_map.value, ".+", row, "subject",ignore , triples_map.iterator)
 
 		elif "constant" in triples_map.subject_map.subject_mapping_type:
 			subject = "<" + subject_value + ">"

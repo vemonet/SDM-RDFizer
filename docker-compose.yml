@@ -1,0 +1,41 @@
+version: "3"
+services:
+  
+  rdfizer:
+    # image: ghcr.io/vemonet/rdfizer:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+      # args:
+      #   INSTALL_DEV: ${INSTALL_DEV-true}
+    volumes:
+      - ./example:/data
+      # - ./results/:/results
+      # - ./mappings:/mappings
+      # - ./rdfizer:/app/rdfizer
+      # - ../bio2kg-etl/datasets:/data
+    
+    # command: -c config.ini
+    # entrypoint: python3 /app/app.py
+    # ports:
+    #   - 4000:4000
+
+  # funmap:
+  #   container_name: funmap
+  #   image: funmap:latest
+  #   shm_size: '50gb'
+  #   volumes:
+  #     - ./data:/data
+  #     - ./results/:/results
+  #     - ./mappings:/mappings
+
+  # mysql:
+  #   container_name: mysql
+  #   image: mysql:8.0
+  #   shm_size: '50gb'
+  #   volumes:
+  #     - ./sql/:/docker-entrypoint-initdb.d/
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: pass
+  #   ports:
+  #     - "3306:3306"

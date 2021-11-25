@@ -2,7 +2,7 @@ import re
 
 class TriplesMap:
 
-	def __init__(self, triples_map_id, data_source, subject_map, predicate_object_maps_list, ref_form=None, iterator=None, tablename=None, query=None):
+	def __init__(self, triples_map_id, data_source, subject_map, predicate_object_maps_list, ref_form=None, iterator=None, tablename=None, query=None,function=False):
 
 		"""
 		Constructor of a TriplesMap object
@@ -42,7 +42,8 @@ class TriplesMap:
 			exit(1)
 
 		self.predicate_object_maps_list = predicate_object_maps_list
-
+		self.function = function
+		print('tripleMap function', function)
 
 	def __repr__(self):
 
@@ -147,7 +148,11 @@ class ObjectMap:
 			Object representing a object-map
 
 		"""
-
+		print('init ObjectMap')
+		print('object_value', object_value)
+		print('object_datatype', object_datatype)
+		print('object_mapping_type', object_mapping_type)
+		print('term', term)
 		self.value = object_value
 		self.datatype = object_datatype if object_datatype != "None" else None 
 		self.mapping_type = object_mapping_type

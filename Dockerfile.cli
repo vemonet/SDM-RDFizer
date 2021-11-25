@@ -1,0 +1,38 @@
+# Use an official Python runtime as a parent image
+FROM python:3.8
+# FROM python:3.5
+
+# Set the working directory to /app
+WORKDIR /app
+
+# Install https://github.com/SDM-TIB/Dragoman to process functions
+# RUN pip install dragoman-tool
+# RUN pip install git+git://github.com/vemonet/Dragoman.git@vemonet-dev
+
+# Copy the current directory contents into the container at /app
+ADD requirements.txt /app
+
+# Install any needed packages specified in requirements.txt
+RUN pip3 install --trusted-host pypi.python.org -r requirements.txt
+
+ADD . /app
+
+# Fix issue with symlinks not being copied in the docker image:
+ADD README.md VERSION requirements.txt /app/rdfizer/
+
+# Install the rdfizer package
+RUN pip install ./rdfizer
+
+WORKDIR /data
+
+ENTRYPOINT [ "rdfizer" ]
+
+# Run config.ini in workdir /data by default
+CMD ["-c", "config.ini"]
+
+## Usage:
+# docker build -t ghcr.io/vemonet/rdfizer:latest -f Dockerfile.cli .
+# docker run -it --rm -v $(pwd):/data ghcr.io/vemonet/rdfizer:latest -c config.ini
+
+## Test functions in Dragoman repo:
+# docker run -it --rm -v $(pwd)/example/hgnc:/data ghcr.io/vemonet/rdfizer:latest -c config.ini
